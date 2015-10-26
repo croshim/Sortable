@@ -36,6 +36,7 @@
 		.directive('ngSortable', ['$parse', 'ngSortableConfig', function ($parse, ngSortableConfig) {
 			var removed,
 				nextSibling,
+        realOldIndex,
 				getSourceFactory = function getSourceFactory(el, scope) {
 					var ngRepeat = [].filter.call(el.childNodes, function (node) {
 						return (
@@ -82,7 +83,7 @@
 
 						/* jshint expr:true */
 						options[name] && options[name]({
-							model: item || source[evt.newIndex],
+							model: item || source[evt.newIndex] || source[realOldIndex],
 							models: source,
 							oldIndex: evt.oldIndex,
 							newIndex: evt.newIndex
@@ -98,10 +99,11 @@
 							return;
 						}
 
-						var oldIndex = evt.oldIndex,
+						var oldIndex = realOldIndex,
 							newIndex = evt.newIndex;
 
 						if (el !== evt.from) {
+
 							var prevItems = evt.from[expando]();
 
 							removed = prevItems[oldIndex];
@@ -133,11 +135,20 @@
 					}, {
 						onStart: function (/**Event*/evt) {
 							nextSibling = evt.item.nextSibling;
+
+              if (!realOldIndex) {
+                var copy = [].slice.call(evt.from.children);
+                realOldIndex = copy.map(function (el) {
+                  return el.$$hashKey;
+                }).indexOf(evt.item.$$hashKey);            
+              }
+
 							_emitEvent(evt);
 							scope.$apply();
 						},
 						onEnd: function (/**Event*/evt) {
 							_emitEvent(evt, removed);
+              realOldIndex = null;
 							scope.$apply();
 						},
 						onAdd: function (/**Event*/evt) {
